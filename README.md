@@ -2,18 +2,18 @@
 
 A working prototype for case study 1: a Turkish voice assistant for a bank call centre. The focus is not **how smart it is** but **what it does safely on its own and what it leaves to a human**.
 
-## Demo (2 min, with sound)
+## Demo (under 2 min, with sound)
 
-https://github.com/user-attachments/assets/009fa9fe-3615-4e3b-94eb-0a9757c96d51
+https://github.com/user-attachments/assets/1fa5927b-ccfa-4e4f-945a-ac5c28a66d56
 
-If the player does not load: [MP4 file (2.5 MB)](docs/media/demo.mp4)
+If the player does not load: [MP4 file (2.4 MB)](docs/media/demo.mp4)
 
 | Time | What happens | What it shows |
 | --- | --- | --- |
 | 0:00 | "Merhaba" (hello) → greeting + keypad menu, caller presses 1 → branch hours | Reply variants, DTMF menu |
-| 0:22 | "Kartımı kaybetmedim" (I didn't lose my card) → no handoff, clarification | Negation (`negated:card_security`) |
-| 0:45 | "Bakiyemi öğrenmek istiyorum" (I want my balance) → PIN keyed in (••••) → demo balance → 9 to end | Authentication; the PIN stays `[PIN]` in the log |
-| 1:49 | "Adım Ahmet Yılmaz, kartım çalındı" (my name is …, my card was stolen) → name masked, handed to card security | Name masking, immediate handoff on a security intent |
+| 0:19 | "Kartımı kaybetmedim" (I didn't lose my card) → no handoff, clarification | Negation (`negated:card_security`) |
+| 0:38 | "Bakiyemi öğrenmek istiyorum" (I want my balance) → PIN keyed in (••••) → demo balance → 9 to end | Authentication; the PIN stays `[PIN]` in the log |
+| 1:41 | "Adım Ahmet Yılmaz, kartım çalındı" (my name is …, my card was stolen) → name masked, handed to card security | Name masking, immediate handoff on a security intent |
 
 The video was recorded against the live service with a scripted browser run: the assistant's voice is ElevenLabs TTS ("Şevval"), the caller is a second Turkish ElevenLabs voice; the typed text stands for what the caller says. The few seconds of waiting between replies is **real TTS latency** (see [first run results](docs/05-first-run.md)). Balances are made up.
 
