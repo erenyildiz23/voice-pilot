@@ -1,0 +1,9 @@
+ref,hyp,expected_intent,expected_action
+Kartımı kaybetmedim ama sanırım çalındı.,Kartımı kaybetmedim ama sanırım çalındı.,kart_kayip,handoff
+Kartımı kaybetmedim.,Kartımı kaybetmedim.,bilinmiyor,clarify
+Birisi kartımla alışveriş yapmış.,Birisi kartımla alışveriş yapmış.,kart_kayip,handoff
+"Şikayetim yok, sadece bir şey soracaktım.","Şikayetim yok, sadece bir şey soracaktım.",bilinmiyor,clarify
+Şubeniz cumartesi kaçta açılıyor?,Şubeniz cumartesi kaçta açılıyor?,sube_saatleri,answer
+"Adım Ayşe Demir, kredi başvurusu için hangi belgeler gerekiyor?","Adım Ayşe Demir, kredi başvurusu için hangi belgeler gerekiyor?",kredi_bilgi,answer
+Kimlik numaram bir iki üç dört beş altı yedi sekiz iki altı dört.,Kimlik numaram bir iki üç dört beş altı yedi sekiz iki altı dört.,hassas_veri,handoff
+Kredi kartı limitimi artırmak istiyorum.,Kredi kartı limitimi artırmak istiyorum.,kapsam_disi,handoff

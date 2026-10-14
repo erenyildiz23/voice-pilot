@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sesli asistan pilotu – demo</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2330; --muted:#667085; --line:#e4e7ec;
+          --answer:#067647; --clarify:#b54708; --handoff:#b42318; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+  #log { display:flex; flex-direction:column; gap:10px; min-height: 200px; }
+  .turn { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+  .who { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .badge { display:inline-block; font-size:12px; font-weight:600; padding:1px 8px; border-radius:99px; color:#fff; margin-left:6px; }
+  .answer { background:var(--answer); } .collect { background:#175cd3; } .clarify { background:var(--clarify); } .handoff { background:var(--handoff); }
+  .meta { font: 12px/1.4 ui-monospace, monospace; color: var(--muted); margin-top: 6px; word-break: break-word; }
+  form { display:flex; gap:8px; margin-top:16px; flex-wrap: wrap; }
+  input[type=text] { flex:1 1 280px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font:inherit; }
+  button { padding:10px 16px; border:0; border-radius:8px; background:var(--ink); color:#fff; font:inherit; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .chips button { background:var(--card); color:var(--ink); border:1px solid var(--line); padding:4px 10px; font-size:13px; }
+  label { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:13px; }
+  .pad { display:grid; grid-template-columns:repeat(3, 56px); gap:6px; margin-top:14px; }
+  .pad button { padding:10px 0; background:var(--card); color:var(--ink); border:1px solid var(--line); font-size:16px; }
+  .padrow { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+  #pinbox { font: 600 18px ui-monospace, monospace; letter-spacing:.3em; margin-top:18px; min-height:24px; color:#175cd3; }
+  .banner { background:#fffaeb; border:1px solid #fedf89; border-radius:8px; padding:8px 12px; font-size:13px; margin-bottom:16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Türkçe sesli asistan pilotu</h1>
+  <p class="sub">Demo Finans (kurgusal). Yanıtlar onaylı şablondur; kişisel veri maskelenir; emin olunmayan durum temsilciye devredilir.</p>
+  <div class="banner" id="status">Durum yükleniyor…</div>
+  <div id="log"></div>
+  <form id="f">
+    <input type="text" id="t" placeholder="Arayanın söylediği…" autocomplete="off" maxlength="1000" required>
+    <label><input type="checkbox" id="audio" checked> Ses üret</label>
+    <button type="submit">Gönder</button>
+    <button type="button" id="mic" title="Basılı tut değil: bir kez bas konuş, tekrar bas gönder">🎤 Konuş</button>
+    <button type="button" class="ghost" id="reset">Yeni çağrı</button>
+  </form>
+  <div class="chips" id="chips"></div>
+  <div class="padrow">
+    <div class="pad" id="pad" aria-label="Telefon tuş takımı"></div>
+    <div><div class="who">Tuşlama</div><div id="pinbox"></div></div>
+  </div>
+</main>
+<script>
+const examples = [
+  "Merhaba", "Şubeniz saat kaçta açılıyor", "Kartımı kaybetmedim",
+  "Adım Ahmet Yılmaz, kartım çalındı", "TC kimlik 12345678264 bakiyemi söyler misiniz",
+  "Kredi kartı limitimi artırmak istiyorum", "Bakiyemi öğrenmek istiyorum", "mavi bulut"
+];
+let sid = null, awaiting = null, pinBuf = "";
+const log = document.getElementById("log");
+const t = document.getElementById("t");
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function addUser(text) {
+  const d = el("div", "turn"); d.append(el("div", "who", "Arayan"), el("div", null, text)); log.append(d);
+}
+function addBot(j) {
+  const d = el("div", "turn");
+  const who = el("div", "who", "Asistan"); who.append(el("span", "badge " + j.action, j.action));
+  const meta = el("div", "meta",
+    `niyet=${j.intent}  gerekçe=${j.reasons.join(", ")}\nmaskelenmiş girdi: ${j.transcript_redacted}` +
+    (Object.keys(j.pii_found).length ? `\nbulunan kişisel veri: ${JSON.stringify(j.pii_found)}` : ""));
+  meta.style.whiteSpace = "pre-wrap";
+  d.append(who, el("div", null, j.reply), meta);
+  log.append(d);
+  if (j.audio_b64) {
+    const bytes = Uint8Array.from(atob(j.audio_b64), c => c.charCodeAt(0));
+    if (String.fromCharCode(...bytes.slice(0, 10)) !== "MOCKAUDIO:") {
+      new Audio(URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }))).play().catch(() => {});
+    }
+  }
+}
+async function send(text, dtmf) {
+  addUser(dtmf ? `☎ tuşladı: ${awaiting === "pin" ? "••••" : dtmf}` : text);
+  const payload = { session_id: sid, with_audio: document.getElementById("audio").checked };
+  if (dtmf) payload.dtmf = dtmf; else payload.text = text;
+  const r = await fetch("/v1/turn", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload) });
+  if (!r.ok) { log.append(el("div", "turn", `Hata ${r.status}: çağrı temsilciye yönlendirilmeli.`)); return; }
+  const j = await r.json(); sid = j.session_id; awaiting = j.awaiting; addBot(j); pinUi();
+  window.scrollTo(0, document.body.scrollHeight);
+}
+// Mikrofon: kaydı /v1/turn/audio'ya yollar (ALLOW_CLOUD_AUDIO=true gerekir; ses buluttaki STT'ye gider).
+const mic = document.getElementById("mic");
+let rec = null, chunks = [];
+mic.addEventListener("click", async () => {
+  if (rec && rec.state === "recording") { rec.stop(); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { log.append(el("div", "turn", "Mikrofon izni alınamadı.")); return; }
+  chunks = [];
+  rec = new MediaRecorder(stream);
+  rec.ondataavailable = e => chunks.push(e.data);
+  rec.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop());
+    mic.textContent = "🎤 Konuş";
+    const fd = new FormData();
+    fd.append("file", new Blob(chunks, { type: rec.mimeType }), "kayit.webm");
+    if (sid) fd.append("session_id", sid);
+    log.append(el("div", "turn who", "Arayan (ses) — yazıya çevriliyor…"));
+    const t0 = performance.now();
+    const r = await fetch("/v1/turn/audio", { method: "POST", body: fd });
+    if (!r.ok) { log.append(el("div", "turn", `Hata ${r.status}: ${(await r.json()).detail}`)); return; }
+    const j = await r.json(); sid = j.session_id; awaiting = j.awaiting; pinUi();
+    j.reasons.push(`süre=${((performance.now() - t0) / 1000).toFixed(1)}sn`);
+    addBot(j);
+    window.scrollTo(0, document.body.scrollHeight);
+  };
+  rec.start();
+  mic.textContent = "⏹ Bitir ve gönder";
+});
+document.getElementById("f").addEventListener("submit", e => { e.preventDefault(); const v = t.value.trim(); if (v) { t.value = ""; send(v); } });
+document.getElementById("reset").addEventListener("click", () => { sid = null; awaiting = null; pinBuf = ""; pinUi(); log.replaceChildren(); });
+// Tuş takımı: PIN beklenirken 4 hane toplanıp tek seferde gönderilir (şifre ekranda gizli); 0 tek başına temsilci.
+const pinbox = document.getElementById("pinbox");
+function pinUi() { pinbox.textContent = awaiting === "pin" ? ("•".repeat(pinBuf.length) + "_".repeat(4 - pinBuf.length)) : ""; }
+for (const k of ["1","2","3","4","5","6","7","8","9","*","0","#"]) {
+  const b = el("button", null, k); b.type = "button";
+  b.onclick = () => {
+    if (awaiting === "pin") {
+      if (k === "0" && pinBuf === "") { send(null, "0"); return; }
+      if (!/[0-9]/.test(k)) return;
+      pinBuf += k; pinUi();
+      if (pinBuf.length === 4) { const p = pinBuf; pinBuf = ""; send(null, p); }
+    } else { send(null, k); }
+  };
+  document.getElementById("pad").append(b);
+}
+const chips = document.getElementById("chips");
+for (const x of examples) { const b = el("button", null, x); b.type = "button"; b.onclick = () => send(x); chips.append(b); }
+fetch("/health").then(r => r.json()).then(h => {
+  document.getElementById("status").textContent =
+    `Sağlayıcı: ${h.provider}. Bulut ses ucu: ${h.cloud_audio ? "AÇIK" : "kapalı (ALLOW_CLOUD_AUDIO=false)"}. ` +
+    (h.mock_banking ? "Demo bankacılık AÇIK (demo PIN: 1234, bakiyeler uydurmadır)." : "Demo bankacılık kapalı: bakiye talebi temsilciye gider.");
+});
+</script>
+</body>
+</html>
