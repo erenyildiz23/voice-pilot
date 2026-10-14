@@ -1,6 +1,6 @@
-# Case study 1: A Turkish voice assistant pilot in a customer environment
+# Project summary: Voice Pilot
 
-*Target role: Forward Deployed Engineer. One-page summary; details in docs 01–05.*
+*A safe Turkish voice assistant for a bank call centre, built as a customer pilot. One-page summary; details in docs 01–05.*
 
 ## Context
 

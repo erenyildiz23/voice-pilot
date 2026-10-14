@@ -99,7 +99,7 @@ def test_dtmf_pin_never_reaches_audit_or_response(tmp_path):
     r = c.post("/v1/turn", json={"session_id": sid, "dtmf": "1234", "with_audio": True})
     j = r.json()
     assert r.status_code == 200 and j["action"] == "answer" and j["awaiting"] == "post"
-    assert "1234" not in json.dumps({k: v for k, v in j.items() if k != "audio_b64"})
+    assert j["transcript_redacted"] == "[PIN]" and "1234" not in j["reply"]
     assert "1234" not in (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
 
 

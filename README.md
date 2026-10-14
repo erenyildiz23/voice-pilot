@@ -1,6 +1,10 @@
-# Turkish voice assistant pilot in a customer environment
+# Voice Pilot
 
-A working prototype for case study 1: a Turkish voice assistant for a bank call centre. The focus is not **how smart it is** but **what it does safely on its own and what it leaves to a human**.
+[![tests](https://github.com/erenyildiz23/voice-pilot/actions/workflows/tests.yml/badge.svg)](https://github.com/erenyildiz23/voice-pilot/actions/workflows/tests.yml)
+
+**A safe Turkish voice assistant for bank call centres, built as a customer pilot.**
+
+It is a working prototype built for a setting where call data must not leave the customer's environment. The focus is not **how smart it is** but **what it does safely on its own and what it leaves to a human**.
 
 ## Demo (under 2 min, with sound)
 
@@ -31,6 +35,8 @@ The assistant speaks Turkish, so reply templates, matching rules and the sample 
 
 ## Quick start (offline, mock provider)
 
+Requires Python 3.10+.
+
 ```bash
 pip install -r requirements.txt
 python -m pytest -q
@@ -46,7 +52,7 @@ To use the live ElevenLabs service, copy `.env.example` to `.env` and follow [do
 
 | Area | Status |
 | --- | --- |
-| Redaction, intents, negation, dialogue, keypad menu, PIN flow, API, demo page, audit log | 76 unit/endpoint tests pass |
+| Redaction, intents, negation, dialogue, keypad menu, PIN flow, API, demo page, audit log | 76 unit/endpoint tests pass; they and the smoke eval run in CI on every push |
 | End to end with ElevenLabs | Run against the live service: text+TTS and audio→STT→redaction→TTS turns work; a wrong key returns 502 with no leak. Latency 4.8–5.4 s per turn ([details](docs/05-first-run.md#first-run-results-14-october-2026-free-plan)) |
 | End to end in a browser | A scripted Chrome run found two bugs unit tests missed (PINs starting with 0; a late reply hijacking a new call). Both fixed and covered by tests |
 | Turkish STT/TTS quality | Measured on clean synthetic audio: 0% WER on 8 sentences, 8/8 correct decisions ([eval/stt_measurement.md](eval/stt_measurement.md)). **Not measured on phone audio**; this is the best case |
@@ -62,7 +68,7 @@ To use the live ElevenLabs service, copy `.env.example` to `.env` and follow [do
 
 ## Documents
 
-0. [One-page case study](docs/00-case-study.md)
+0. [One-page project summary](docs/00-project-summary.md)
 1. [Discovery note](docs/01-discovery-note.md)
 2. [Architecture](docs/02-architecture.md)
 3. [Risk register](docs/03-risk-register.md)

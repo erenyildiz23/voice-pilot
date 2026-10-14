@@ -1,1 +1,1 @@
-"""Turkish voice assistant pilot in a customer environment (case study 1)."""
+"""Voice Pilot: a safe Turkish voice assistant for bank call centres."""
