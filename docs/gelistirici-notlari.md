@@ -1,4 +1,4 @@
-# Proje notları (Claude Code için)
+# Geliştirici notları
 
 Türkçe sesli asistan pilotu: çağrı merkezi için, kişisel veri sızdırmayan, belirsizlikte insana devreden bir prototip.
 

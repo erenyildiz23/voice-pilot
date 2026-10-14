@@ -61,3 +61,4 @@ curl -s localhost:8000/v1/turn -H 'content-type: application/json' \
 3. [Risk tablosu](docs/03-risk-tablosu.md)
 4. [30 günlük pilot planı](docs/04-pilot-plani-30-gun.md)
 5. [ElevenLabs ile ilk çalıştırma](docs/05-ilk-calistirma.md)
+6. [Geliştirici notları](docs/gelistirici-notlari.md)
