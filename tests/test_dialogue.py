@@ -127,10 +127,18 @@ def test_spoken_pin_is_refused_and_not_logged():
     assert "dört" not in r.redacted_input
 
 
-def test_zero_during_pin_reaches_agent():
+def test_star_during_pin_reaches_agent():
     s = Session()
     bank.handle(s, "Bakiye")
-    assert bank.handle_dtmf(s, "0").intent == "temsilci_talebi"
+    assert bank.handle_dtmf(s, "*").intent == "temsilci_talebi"
+
+
+def test_pin_may_start_with_zero():
+    # Chrome testinde bulundu: 0 eskiden PIN ekranından çıkıştı, 0'la başlayan PIN girilemiyordu.
+    s = Session()
+    bank.handle(s, "Bakiye")
+    r = bank.handle_dtmf(s, "0123")
+    assert r.action == "collect" and "auth_retry" in r.reasons
 
 
 def test_security_intents_never_answered_even_with_mock_banking():

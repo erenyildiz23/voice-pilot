@@ -58,6 +58,9 @@ const examples = [
   "Kredi kartı limitimi artırmak istiyorum", "Bakiyemi öğrenmek istiyorum", "mavi bulut"
 ];
 let sid = null, awaiting = null, pinBuf = "";
+// Turlar sırayla gider; "Yeni çağrı"dan sonra önceki çağrının geç gelen yanıtı yok sayılır.
+let callGen = 0, queue = Promise.resolve();
+const enqueue = fn => (queue = queue.then(fn, fn));
 const log = document.getElementById("log");
 const t = document.getElementById("t");
 
@@ -82,14 +85,17 @@ function addBot(j) {
     }
   }
 }
-async function send(text, dtmf) {
+function send(text, dtmf) { const gen = callGen; return enqueue(() => gen === callGen && sendNow(text, dtmf, gen)); }
+async function sendNow(text, dtmf, gen) {
   addUser(dtmf ? `☎ tuşladı: ${awaiting === "pin" ? "••••" : dtmf}` : text);
   const payload = { session_id: sid, with_audio: document.getElementById("audio").checked };
   if (dtmf) payload.dtmf = dtmf; else payload.text = text;
   const r = await fetch("/v1/turn", { method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify(payload) });
+  if (gen !== callGen) return;
   if (!r.ok) { log.append(el("div", "turn", `Hata ${r.status}: çağrı temsilciye yönlendirilmeli.`)); return; }
-  const j = await r.json(); sid = j.session_id; awaiting = j.awaiting; addBot(j); pinUi();
+  const j = await r.json(); if (gen !== callGen) return;
+  sid = j.session_id; awaiting = j.awaiting; addBot(j); pinUi();
   window.scrollTo(0, document.body.scrollHeight);
 }
 // Mikrofon: kaydı /v1/turn/audio'ya yollar (ALLOW_CLOUD_AUDIO=true gerekir; ses buluttaki STT'ye gider).
@@ -103,6 +109,7 @@ mic.addEventListener("click", async () => {
   chunks = [];
   rec = new MediaRecorder(stream);
   rec.ondataavailable = e => chunks.push(e.data);
+  const gen = callGen;
   rec.onstop = async () => {
     stream.getTracks().forEach(t => t.stop());
     mic.textContent = "🎤 Konuş";
@@ -113,7 +120,8 @@ mic.addEventListener("click", async () => {
     const t0 = performance.now();
     const r = await fetch("/v1/turn/audio", { method: "POST", body: fd });
     if (!r.ok) { log.append(el("div", "turn", `Hata ${r.status}: ${(await r.json()).detail}`)); return; }
-    const j = await r.json(); sid = j.session_id; awaiting = j.awaiting; pinUi();
+    const j = await r.json(); if (gen !== callGen) return;
+    sid = j.session_id; awaiting = j.awaiting; pinUi();
     j.reasons.push(`süre=${((performance.now() - t0) / 1000).toFixed(1)}sn`);
     addBot(j);
     window.scrollTo(0, document.body.scrollHeight);
@@ -122,20 +130,22 @@ mic.addEventListener("click", async () => {
   mic.textContent = "⏹ Bitir ve gönder";
 });
 document.getElementById("f").addEventListener("submit", e => { e.preventDefault(); const v = t.value.trim(); if (v) { t.value = ""; send(v); } });
-document.getElementById("reset").addEventListener("click", () => { sid = null; awaiting = null; pinBuf = ""; pinUi(); log.replaceChildren(); });
-// Tuş takımı: PIN beklenirken 4 hane toplanıp tek seferde gönderilir (şifre ekranda gizli); 0 tek başına temsilci.
+document.getElementById("reset").addEventListener("click", () => { callGen++; sid = null; awaiting = null; pinBuf = ""; pinUi(); log.replaceChildren(); });
+// Tuş takımı: PIN beklenirken 4 hane toplanıp tek seferde gönderilir (şifre ekranda gizli); * temsilci.
 const pinbox = document.getElementById("pinbox");
 function pinUi() { pinbox.textContent = awaiting === "pin" ? ("•".repeat(pinBuf.length) + "_".repeat(4 - pinBuf.length)) : ""; }
 for (const k of ["1","2","3","4","5","6","7","8","9","*","0","#"]) {
   const b = el("button", null, k); b.type = "button";
-  b.onclick = () => {
+  // Karar sıra gelince verilir: önceki yanıt "PIN bekleniyor" dediyse bu tuş şifre hanesidir.
+  b.onclick = () => { const gen = callGen; enqueue(async () => {
+    if (gen !== callGen) return;
     if (awaiting === "pin") {
-      if (k === "0" && pinBuf === "") { send(null, "0"); return; }
+      if (k === "*") { pinBuf = ""; pinUi(); return sendNow(null, "*", gen); }
       if (!/[0-9]/.test(k)) return;
       pinBuf += k; pinUi();
-      if (pinBuf.length === 4) { const p = pinBuf; pinBuf = ""; send(null, p); }
-    } else { send(null, k); }
-  };
+      if (pinBuf.length === 4) { const p = pinBuf; pinBuf = ""; return sendNow(null, p, gen); }
+    } else { return sendNow(null, k, gen); }
+  }); };
   document.getElementById("pad").append(b);
 }
 const chips = document.getElementById("chips");

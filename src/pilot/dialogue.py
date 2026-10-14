@@ -54,11 +54,11 @@ FAQ: dict[str, list[str]] = {
         "Bu tuş için tanımlı bir işlem yok.",
     ],
     "pin_prompt": [
-        "Bakiye bilgisi için kimliğinizi doğrulamam gerekiyor. Lütfen dört haneli telefon bankacılığı şifrenizi tuşlayın.",
-        "Hesap bilgilerinizi paylaşabilmem için dört haneli telefon şifrenizi tuşlamanız gerekiyor.",
+        "Bakiye bilgisi için kimliğinizi doğrulamam gerekiyor. Lütfen dört haneli telefon bankacılığı şifrenizi tuşlayın. Temsilci için yıldız tuşuna basabilirsiniz.",
+        "Hesap bilgilerinizi paylaşabilmem için dört haneli telefon şifrenizi tuşlamanız gerekiyor. Temsilciye bağlanmak isterseniz yıldıza basın.",
     ],
     "pin_spoken": [
-        "Güvenliğiniz için şifrenizi lütfen sesli söylemeyin; telefonunuzun tuşlarıyla girin. Temsilciye bağlanmak için 0'ı tuşlayabilirsiniz.",
+        "Güvenliğiniz için şifrenizi lütfen sesli söylemeyin; telefonunuzun tuşlarıyla girin. Temsilciye bağlanmak için yıldız tuşuna basabilirsiniz.",
     ],
     "pin_retry": [
         "Girdiğiniz şifre doğrulanamadı. Lütfen tekrar tuşlayın.",
@@ -234,7 +234,7 @@ class DialogueManager:
             redacted = "[PIN]"
             if session.handed_off:
                 return self._handoff(session, "devredildi", "already_handed_off", ["already_handed_off"], redacted, pii)
-            if digits == "0":  # PIN ekranından çıkış: temsilci
+            if digits == "*":  # PIN ekranından çıkış: temsilci (0 PIN'in ilk hanesi olabilir)
                 return self._handoff(session, "temsilci_talebi", "temsilci_talebi", ["dtmf", "policy_handoff:temsilci_talebi"], redacted, pii)
             if mockbank.verify_pin(digits.rstrip("#")):
                 session.pin_attempts = 0
