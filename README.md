@@ -75,3 +75,7 @@ To use the live ElevenLabs service, copy `.env.example` to `.env` and follow [do
 4. [30-day pilot plan](docs/04-30-day-pilot-plan.md)
 5. [First run with ElevenLabs](docs/05-first-run.md)
 6. [Developer notes](docs/developer-notes.md)
+
+## License
+
+MIT. See [LICENSE](LICENSE).
