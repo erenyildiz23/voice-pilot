@@ -2,6 +2,21 @@
 
 Case study 1'in çalışan prototipi: çağrı merkezi için Türkçe sesli asistan. Odak **ne kadar akıllı olduğu** değil, **neyi güvenle yapıp neyi insana bıraktığı**.
 
+## Demo (2 dk, sesli)
+
+[![Demo videosu: PIN doğrulama sonrası demo bakiye](docs/media/demo-poster.png)](docs/media/demo.mp4)
+
+▶ [Videoyu izle (MP4, 2,5 MB)](docs/media/demo.mp4)
+
+| Zaman | Ne oluyor | Gösterdiği |
+| --- | --- | --- |
+| 0:00 | "Merhaba" → karşılama + tuşlama menüsü, 1'e basılır → şube saatleri | Şablon varyantları, DTMF menüsü |
+| 0:22 | "Kartımı kaybetmedim" → devir yok, netleştirme | Olumsuzlama (`negated:kart_kayip`) |
+| 0:45 | "Bakiyemi öğrenmek istiyorum" → PIN tuşlanır (••••) → demo bakiye → 9 ile kapanış | Kimlik doğrulama, PIN'in logda `[PIN]` olarak kalması |
+| 1:49 | "Adım Ahmet Yılmaz, kartım çalındı" → ad maskelenir, kart güvenliğine devir | Ad-soyad maskeleme, güvenlik niyetinde anında devir |
+
+Video gerçek servisle, otomatik bir tarayıcı senaryosuyla kaydedildi: asistan sesi ElevenLabs TTS ("Şevval"), arayan sesi de ElevenLabs TTS ile üretilmiş ikinci bir Türkçe ses; yazılan metin arayanın sözünü temsil ediyor. Yanıtlar arasındaki birkaç saniyelik bekleme **gerçek TTS gecikmesidir** (bkz. [ilk çalıştırma sonuçları](docs/05-ilk-calistirma.md)). Bakiyeler uydurmadır.
+
 - Kişisel veri (TCKN, IBAN, kart, telefon, e-posta, sözlü rakam dizisi, ipuçlu ad-soyad) sınıflandırmadan, logdan ve TTS'ten önce maskelenir.
 - Güvenlik ve kimlik doğrulama gerektiren niyetler (kart kaybı/izinsiz işlem, şikayet, bakiye) hemen insana devredilir. Kapsam dışı bankacılık talepleri (limit, şifre, havale) "anlamadım" döngüsüne girmeden devredilir.
 - Olumsuzlama anlaşılır: "kartımı kaybetmedim" devredilmez ama denetim kaydına `negated:kart_kayip` olarak düşer; "kaybetmedim ama çalındı" yine devredilir.
