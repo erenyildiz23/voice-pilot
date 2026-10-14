@@ -1,12 +1,12 @@
-"""FastAPI uygulaması.
+"""FastAPI application.
 
-Uç noktalar:
-  GET  /               -> demo sayfası (metin kanalı)
+Endpoints:
+  GET  /               -> demo page
   GET  /health
-  POST /v1/turn        {session_id?, text | dtmf, with_audio?} -> metinle ya da tuşlamayla tur
-  POST /v1/turn/audio  multipart: file, session_id?         -> sesle tur (ALLOW_CLOUD_AUDIO=true gerekir)
+  POST /v1/turn        {session_id?, text | dtmf, with_audio?} -> text or keypad turn
+  POST /v1/turn/audio  multipart: file, session_id?           -> audio turn (needs ALLOW_CLOUD_AUDIO=true)
 
-Ham transkript hiçbir yanıtta dönmez; yalnızca maskelenmiş hali döner.
+The raw transcript is never returned; only the redacted version is.
 """
 from __future__ import annotations
 
@@ -26,13 +26,13 @@ from .providers import ElevenLabsProvider, MockProvider, ProviderError, SpeechPr
 class TurnRequest(BaseModel):
     session_id: str | None = None
     text: str | None = Field(default=None, min_length=1, max_length=1000)
-    dtmf: str | None = Field(default=None, pattern=r"^[0-9*#]{1,8}$")  # telefon tuşlaması
+    dtmf: str | None = Field(default=None, pattern=r"^[0-9*#]{1,8}$")  # phone keypad input
     with_audio: bool = False
 
     @model_validator(mode="after")
     def one_input(self):
         if (self.text is None) == (self.dtmf is None):
-            raise ValueError("text ya da dtmf alanlarından tam olarak biri gerekli")
+            raise ValueError("exactly one of text or dtmf is required")
         return self
 
 
@@ -59,11 +59,11 @@ def create_app(
     audit = audit or AuditLog(os.environ.get("AUDIT_LOG_PATH"))
     if allow_cloud_audio is None:
         allow_cloud_audio = os.environ.get("ALLOW_CLOUD_AUDIO", "false").lower() == "true"
-    # Demo bankacılık: bakiye için PIN tuşlama + sahte hesap servisi. Varsayılan kapalı.
+    # Demo banking: PIN entry for balance + mock account service. Off by default.
     if mock_banking is None:
         mock_banking = os.environ.get("MOCK_BANKING", "false").lower() == "true"
     dm = DialogueManager(mock_banking=mock_banking)
-    sessions: dict[str, Session] = {}  # Pilot için bellek içi; üretimde Redis vb.
+    sessions: dict[str, Session] = {}  # In memory for the pilot; Redis or similar in production
 
     def get_session(sid: str | None) -> Session:
         if sid and sid in sessions:
@@ -88,7 +88,7 @@ def create_app(
             try:
                 out["audio_b64"] = base64.b64encode(provider.synthesize(r.reply)).decode()
             except ProviderError as e:
-                raise HTTPException(502, f"TTS başarısız: {e}")
+                raise HTTPException(502, f"TTS failed: {e}")
         return out
 
     @app.get("/", response_class=HTMLResponse)
@@ -116,16 +116,16 @@ def create_app(
         if not allow_cloud_audio:
             raise HTTPException(
                 403,
-                "Ses işleme kapalı (ALLOW_CLOUD_AUDIO=false). Ses buluttaki STT'ye gideceği için "
-                "müşteri onayı ve hukuki değerlendirme olmadan açılmamalı.",
+                "Audio processing is disabled (ALLOW_CLOUD_AUDIO=false). Audio would be sent to a cloud "
+                "STT, so do not enable it without customer approval and a legal review.",
             )
         audio = await file.read()
         try:
             text = provider.transcribe(audio, file.filename or "audio")
         except ProviderError as e:
-            raise HTTPException(502, f"STT başarısız: {e}")
+            raise HTTPException(502, f"STT failed: {e}")
         if not text.strip():
-            raise HTTPException(422, "Ses anlaşılamadı")
+            raise HTTPException(422, "Audio could not be understood")
         r = dm.handle(get_session(session_id), text)
         audit.write(r, "audio")
         return body(r, with_audio=True)

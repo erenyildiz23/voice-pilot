@@ -1,16 +1,16 @@
-"""Türkçe kişisel veri maskeleme.
+"""Turkish personal data redaction.
 
-Amaç: metin sınıflandırıcıya, loglara ve (varsa) üçüncü taraf servislere
-gitmeden önce TC kimlik no, IBAN, kart no, telefon ve e-postayı maskelemek.
+Goal: mask national ID (TCKN), IBAN, card number, phone and email before the text
+reaches the classifier, the logs or any third-party service.
 
-Sınırlar (dokümanda da yazılı):
-- Rakam olarak yazılmış veriyi doğrulayıcılarla (TCKN, Luhn, IBAN mod 97) yakalar.
-  Sözlü rakam dizisini ("sıfır beş üç iki ...") ise doğrulayamaz; 9 ya da daha fazla
-  ardışık rakam sözcüğünü topluca maskeler ve hassas sayar.
-- Ad-soyadı yalnızca ipucu kalıplarıyla yakalar: "adım ...", "ismim ...", "soyadım ...",
-  "adım soyadım ..." ve büyük harfli "Ahmet Bey / Ayşe Hanım". İpucusuz geçen ad
-  ("ben Ahmet, kartım...") ve adres yakalanmaz.
-- Ses kaydının kendisi bu modülden önce zaten işlenmiş olur.
+Limits (also listed in the docs):
+- Digits written as numbers are caught with validators (TCKN checksum, Luhn, IBAN mod 97).
+  Spoken digit runs ("sıfır beş üç iki ...") cannot be validated, so 9 or more consecutive
+  digit words are masked as a whole and treated as sensitive.
+- Full names are caught only after cue phrases: "adım ..." (my name is), "ismim ...",
+  "soyadım ..." (my surname is), "adım soyadım ..." and capitalised "Ahmet Bey / Ayşe Hanım"
+  (Mr/Ms). A name without a cue ("ben Ahmet, kartım...") and addresses are not caught.
+- The audio itself has already been processed by the time text reaches this module.
 """
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ from collections import Counter
 
 from .intents import tr_fold
 
-# Hassas sayılan türler: bunlar konuşmada geçerse insana devredilir.
-SENSITIVE_KINDS = frozenset({"tckn", "iban", "kart", "sayi_dizisi"})
+# Kinds treated as sensitive: if any appears in the conversation, the call goes to a human.
+SENSITIVE_KINDS = frozenset({"national_id", "iban", "card", "digit_sequence"})
 
 _IBAN_RE = re.compile(
     r"(?<![A-Za-z0-9])TR\s?\d{2}(?:\s?\d{4}){5}\s?\d{2}(?![A-Za-z0-9])", re.IGNORECASE
@@ -31,15 +31,18 @@ _PHONE_RE = re.compile(
     r"(?<!\d)(?:\+90\s?|0090\s?|0)?\(?5\d{2}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}(?!\d)"
 )
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+# Turkish digit words 0-9, with and without diacritics (STT sometimes drops them).
 _DIGIT_WORD = r"(?:sıfır|sifir|bir|iki|üç|uc|dört|dort|beş|bes|altı|alti|yedi|sekiz|dokuz)"
 _LETTERS = "A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû"
+# Name cues: "adım soyadım", "ad soyad(ım)", "adı soyadı", "adım", "ismim", "soyadım".
 _NAME_CUE_RE = re.compile(
     rf"(?<![{_LETTERS}])(?:ad[ıi]m\s+soyad[ıi]m|ad\s+soyad[ıi]?m?|ad[ıi]\s+soyad[ıi]|ad[ıi]m|[iİı]sm[iı]m|soyad[ıi]m)"
     rf"\s*[:,]?\s+([{_LETTERS}]+(?:\s+[{_LETTERS}]+){{0,2}})",
     re.IGNORECASE,
 )
-# İpucundan sonra gelen ama ad olmayan sözcükler: burada durulur ("bir adım daha" maskelenmez,
-# "adım Ahmet kartımı kaybettim" içinde "kartımı" niyet için korunur). Karşılaştırma tr_fold ile.
+# Words that follow a cue but are not names: masking stops here ("bir adım daha" = "one more
+# step" is not masked; in "adım Ahmet kartımı kaybettim" the word "kartımı" is kept for the
+# intent). Compared after tr_fold.
 _NAME_STOP_WORDS = frozenset("ve ama fakat ile icin ben benim bu su o de da daha adim mi mu ne neydi".split())
 _NAME_STOP_STEMS = (
     "soyad", "kart", "sube", "kredi", "hesab", "hesap", "sikayet", "temsilci", "bakiye", "numara",
@@ -52,7 +55,7 @@ _SPOKEN_RE = re.compile(rf"(?<!\w)(?:{_DIGIT_WORD}[\s,.-]+){{8,}}{_DIGIT_WORD}(?
 
 
 def tckn_valid(s: str) -> bool:
-    """TC kimlik numarası sağlama algoritması."""
+    """Turkish national ID (TC kimlik no) checksum."""
     if not (len(s) == 11 and s.isdigit() and s[0] != "0"):
         return False
     d = [int(c) for c in s]
@@ -91,7 +94,7 @@ def _redact_names(t: str, found: Counter) -> str:
     def repl(m: re.Match) -> str:
         words = m.group(1).split()
         name: list[str] = []
-        # Küçük harfli STT çıktısında ad + soyad (2 sözcük); hepsi büyük harfliyse 3'e kadar.
+        # Lower-case STT output: first name + surname (2 words); up to 3 if all are capitalised.
         limit = 3 if all(w[0].isupper() for w in words) else 2
         for w in words[:limit]:
             f = tr_fold(w)
@@ -100,12 +103,12 @@ def _redact_names(t: str, found: Counter) -> str:
             name.append(w)
         if not name:
             return m.group(0)
-        found["ad_soyad"] += 1
+        found["full_name"] += 1
         head = m.group(0)[: m.start(1) - m.start(0)]
         tail = " ".join(words[len(name):])
-        return head + "[AD_SOYAD]" + (" " + tail if tail else "")
+        return head + "[FULL_NAME]" + (" " + tail if tail else "")
 
-    # "adım Ali soyadım Demir": ikinci ipucu ilk eşleşmenin kuyruğunda kalır, bir tur daha.
+    # "adım Ali soyadım Demir": the second cue sits in the tail of the first match, so run again.
     for _ in range(3):
         nt = _NAME_CUE_RE.sub(repl, t)
         if nt == t:
@@ -114,19 +117,19 @@ def _redact_names(t: str, found: Counter) -> str:
 
     def hon(m: re.Match) -> str:
         if tr_fold(m.group(0).split()[0]).startswith(_NAME_STOP_STEMS + ("selam", "gunaydin", "sayin")):
-            return m.group(0)  # "Merhaba Hanım", "Sayın Bey" ad değildir
-        found["ad_soyad"] += 1
-        return "[AD_SOYAD]"
+            return m.group(0)  # "Merhaba Hanım" (hello madam), "Sayın Bey" (dear sir) are not names
+        found["full_name"] += 1
+        return "[FULL_NAME]"
 
     return _HONORIFIC_RE.sub(hon, t)
 
 
 def redact(text: str) -> tuple[str, Counter]:
-    """Metindeki kişisel verileri yer tutucuyla değiştirir.
+    """Replace personal data in the text with placeholders.
 
-    Döner: (maskelenmiş metin, tür başına bulunan sayı).
-    Sıra önemli: sözlü rakam dizisi > IBAN > kart > TCKN > telefon > e-posta > ad-soyad. Yer
-    tutucular rakam içermediği için sonraki desenlerle çakışmaz.
+    Returns: (redacted text, count per kind).
+    Order matters: spoken digit run > IBAN > card > national ID > phone > email > full name.
+    Placeholders contain no digits, so they never collide with later patterns.
     """
     found: Counter = Counter()
 
@@ -141,11 +144,11 @@ def redact(text: str) -> tuple[str, Counter]:
         return pattern.sub(repl, t)
 
     out = text
-    out = apply(out, _SPOKEN_RE, "sayi_dizisi", "[SAYI_DIZISI]", None)
+    out = apply(out, _SPOKEN_RE, "digit_sequence", "[DIGIT_SEQUENCE]", None)
     out = apply(out, _IBAN_RE, "iban", "[IBAN]", iban_valid)
-    out = apply(out, _CARD_RE, "kart", "[KART]", lambda r: luhn_valid(_digits_only(r)))
-    out = apply(out, _TCKN_RE, "tckn", "[TCKN]", tckn_valid)
-    out = apply(out, _PHONE_RE, "telefon", "[TELEFON]", None)
-    out = apply(out, _EMAIL_RE, "eposta", "[EPOSTA]", None)
+    out = apply(out, _CARD_RE, "card", "[CARD]", lambda r: luhn_valid(_digits_only(r)))
+    out = apply(out, _TCKN_RE, "national_id", "[NATIONAL_ID]", tckn_valid)
+    out = apply(out, _PHONE_RE, "phone", "[PHONE]", None)
+    out = apply(out, _EMAIL_RE, "email", "[EMAIL]", None)
     out = _redact_names(out, found)
     return out, found

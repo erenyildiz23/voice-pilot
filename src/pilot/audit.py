@@ -1,4 +1,4 @@
-"""Denetim kaydı. Yalnızca maskelenmiş metin yazılır; ham metin ve ses asla yazılmaz."""
+"""Audit log. Only redacted text is written; raw text and audio never are."""
 from __future__ import annotations
 
 import json

@@ -1,1 +1,1 @@
-"""Müşteri ortamında Türkçe sesli asistan pilotu (case study 1)."""
+"""Turkish voice assistant pilot in a customer environment (case study 1)."""

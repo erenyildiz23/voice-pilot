@@ -1,4 +1,4 @@
-"""STT/TTS sağlayıcıları. Mock çevrimdışı test içindir, ElevenLabs gerçek servistir."""
+"""STT/TTS providers. Mock is for offline tests, ElevenLabs is the real service."""
 from __future__ import annotations
 
 from typing import Protocol
@@ -16,7 +16,7 @@ class SpeechProvider(Protocol):
 
 
 class MockProvider:
-    """Ses yerine UTF-8 metin taşır; testler ve demo için."""
+    """Carries UTF-8 text instead of audio; for tests and the offline demo."""
 
     def transcribe(self, audio: bytes, filename: str) -> str:
         return audio.decode("utf-8")
@@ -26,12 +26,12 @@ class MockProvider:
 
 
 class ElevenLabsProvider:
-    """ElevenLabs REST istemcisi.
+    """ElevenLabs REST client.
 
-    İstek şekilleri resmi dokümandaki örneklere göre yazıldı:
+    Request shapes:
       STT: POST /v1/speech-to-text  (multipart: file, model_id) -> {"text": ...}
-      TTS: POST /v1/text-to-speech/{voice_id}?output_format=...  (json: text, model_id) -> ses baytları
-    Gerçek servisle henüz denenmedi; ilk çalıştırmada docs/05-ilk-calistirma.md'yi izleyin.
+      TTS: POST /v1/text-to-speech/{voice_id}?output_format=...  (json: text, model_id) -> audio bytes
+    Verified against the live service on 2026-10-14 (see docs/05-first-run.md).
     """
 
     def __init__(
@@ -46,7 +46,7 @@ class ElevenLabsProvider:
         client: httpx.Client | None = None,
     ):
         if not api_key or not voice_id:
-            raise ProviderError("ELEVENLABS_API_KEY ve ELEVENLABS_VOICE_ID gerekli")
+            raise ProviderError("ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID are required")
         self._key = api_key
         self._voice = voice_id
         self._stt_model = stt_model
@@ -69,7 +69,7 @@ class ElevenLabsProvider:
             data=data,
         )
         if resp.status_code >= 300:
-            raise ProviderError(f"STT hata kodu {resp.status_code}")
+            raise ProviderError(f"STT error status {resp.status_code}")
         return resp.json().get("text", "")
 
     def synthesize(self, text: str) -> bytes:
@@ -80,5 +80,5 @@ class ElevenLabsProvider:
             json={"text": text, "model_id": self._tts_model},
         )
         if resp.status_code >= 300:
-            raise ProviderError(f"TTS hata kodu {resp.status_code}")
+            raise ProviderError(f"TTS error status {resp.status_code}")
         return resp.content

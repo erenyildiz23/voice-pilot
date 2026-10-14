@@ -1,51 +1,51 @@
 text,expected_intent,expected_action
-Merhaba,selamlama,answer
-İyi günler,selamlama,answer
-Günaydın,selamlama,answer
-Şubeniz kaçta kapanıyor,sube_saatleri,answer
-Cumartesi şubeler açık mı,sube_saatleri,answer
-Şube çalışma saatlerini öğrenebilir miyim,sube_saatleri,answer
-sube mesai saatleri nedir,sube_saatleri,answer
-Kredi başvurusu için hangi belgeler gerekiyor,kredi_bilgi,answer
-Konut kredisine nasıl başvurabilirim,kredi_bilgi,answer
-İhtiyaç kredisi vadesi ne kadar,kredi_bilgi,answer
-Kredi şartları nedir,kredi_bilgi,answer
-Çok teşekkürler,tesekkur_kapanis,answer
-Sağ olun başka bir şey yok,tesekkur_kapanis,answer
-Hoşça kalın,tesekkur_kapanis,answer
-Kartımı kaybettim,kart_kayip,handoff
-Kredi kartım çalındı,kart_kayip,handoff
-Kartımı ATM yuttu,kart_kayip,handoff
-Kartım bloke oldu,kart_kayip,handoff
-Bu bir rezalet,sikayet,handoff
-Şikayetçiyim bu durum kabul edilemez,sikayet,handoff
-Dava açacağım,sikayet,handoff
-Temsilciyle görüşmek istiyorum,temsilci_talebi,handoff
-Müşteri hizmetlerine bağlayın,temsilci_talebi,handoff
-Canlı destek istiyorum,temsilci_talebi,handoff
-Bakiyemi öğrenmek istiyorum,bakiye_sorgu,handoff
-Hesabımda ne kadar param var,bakiye_sorgu,handoff
-Kart borcum ne kadar,bakiye_sorgu,handoff
-Hesap özetimi istiyorum,bakiye_sorgu,handoff
-Kimlik numaram 12345678264 bakiye sorgusu yapın,hassas_veri,handoff
-IBAN numaram TR03 0006 1000 0000 0000 0123 45 para gönderin,hassas_veri,handoff
-Kart numaram 4111 1111 1111 1111,hassas_veri,handoff
-Bugün hava çok güzel,bilinmiyor,clarify
-Pizza sipariş etmek istiyorum,bilinmiyor,clarify
-Dolar kuru kaç,bilinmiyor,clarify
-Mobil uygulamaya giriş yapamıyorum,kapsam_disi,handoff
-Hesap açmak istiyorum,kapsam_disi,handoff
-Şifremi unuttum,kapsam_disi,handoff
-Kredi kartı limitimi artırmak istiyorum,kapsam_disi,handoff
-Havale yapmak istiyorum,kapsam_disi,handoff
-Kartımı kaybetmedim,bilinmiyor,clarify
-Şikayetim yok,bilinmiyor,clarify
-Kartımı kaybetmedim ama sanırım çalındı,kart_kayip,handoff
-Kartım çalındı hiçbir yerde bulamadım,kart_kayip,handoff
-Bu rezalet değil mi,sikayet,handoff
-Adım Ahmet Yılmaz kartımı kaybettim,kart_kayip,handoff
-Adım Ayşe Demir şubeniz kaçta açılıyor,sube_saatleri,answer
-Birisi kartımla alışveriş yapmış,kart_kayip,handoff
-Kartımı bir yerde unuttum galiba,kart_kayip,handoff
-Hiç memnun değilim,sikayet,handoff
-Şubeye gittim kimse ilgilenmedi,sikayet,handoff
+Merhaba,greeting,answer
+İyi günler,greeting,answer
+Günaydın,greeting,answer
+Şubeniz kaçta kapanıyor,branch_hours,answer
+Cumartesi şubeler açık mı,branch_hours,answer
+Şube çalışma saatlerini öğrenebilir miyim,branch_hours,answer
+sube mesai saatleri nedir,branch_hours,answer
+Kredi başvurusu için hangi belgeler gerekiyor,loan_info,answer
+Konut kredisine nasıl başvurabilirim,loan_info,answer
+İhtiyaç kredisi vadesi ne kadar,loan_info,answer
+Kredi şartları nedir,loan_info,answer
+Çok teşekkürler,goodbye,answer
+Sağ olun başka bir şey yok,goodbye,answer
+Hoşça kalın,goodbye,answer
+Kartımı kaybettim,card_security,handoff
+Kredi kartım çalındı,card_security,handoff
+Kartımı ATM yuttu,card_security,handoff
+Kartım bloke oldu,card_security,handoff
+Bu bir rezalet,complaint,handoff
+Şikayetçiyim bu durum kabul edilemez,complaint,handoff
+Dava açacağım,complaint,handoff
+Temsilciyle görüşmek istiyorum,agent_request,handoff
+Müşteri hizmetlerine bağlayın,agent_request,handoff
+Canlı destek istiyorum,agent_request,handoff
+Bakiyemi öğrenmek istiyorum,balance_inquiry,handoff
+Hesabımda ne kadar param var,balance_inquiry,handoff
+Kart borcum ne kadar,balance_inquiry,handoff
+Hesap özetimi istiyorum,balance_inquiry,handoff
+Kimlik numaram 12345678264 bakiye sorgusu yapın,sensitive_data,handoff
+IBAN numaram TR03 0006 1000 0000 0000 0123 45 para gönderin,sensitive_data,handoff
+Kart numaram 4111 1111 1111 1111,sensitive_data,handoff
+Bugün hava çok güzel,unknown,clarify
+Pizza sipariş etmek istiyorum,unknown,clarify
+Dolar kuru kaç,unknown,clarify
+Mobil uygulamaya giriş yapamıyorum,out_of_scope,handoff
+Hesap açmak istiyorum,out_of_scope,handoff
+Şifremi unuttum,out_of_scope,handoff
+Kredi kartı limitimi artırmak istiyorum,out_of_scope,handoff
+Havale yapmak istiyorum,out_of_scope,handoff
+Kartımı kaybetmedim,unknown,clarify
+Şikayetim yok,unknown,clarify
+Kartımı kaybetmedim ama sanırım çalındı,card_security,handoff
+Kartım çalındı hiçbir yerde bulamadım,card_security,handoff
+Bu rezalet değil mi,complaint,handoff
+Adım Ahmet Yılmaz kartımı kaybettim,card_security,handoff
+Adım Ayşe Demir şubeniz kaçta açılıyor,branch_hours,answer
+Birisi kartımla alışveriş yapmış,card_security,handoff
+Kartımı bir yerde unuttum galiba,card_security,handoff
+Hiç memnun değilim,complaint,handoff
+Şubeye gittim kimse ilgilenmedi,complaint,handoff

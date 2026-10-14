@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sesli asistan pilotu – demo</title>
+<title>Turkish voice assistant pilot – demo</title>
 <style>
   :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2330; --muted:#667085; --line:#e4e7ec;
           --answer:#067647; --clarify:#b54708; --handoff:#b42318; }
@@ -34,21 +34,22 @@
 </head>
 <body>
 <main>
-  <h1>Türkçe sesli asistan pilotu</h1>
-  <p class="sub">Demo Finans (kurgusal). Yanıtlar onaylı şablondur; kişisel veri maskelenir; emin olunmayan durum temsilciye devredilir.</p>
-  <div class="banner" id="status">Durum yükleniyor…</div>
+  <h1>Turkish voice assistant pilot</h1>
+  <p class="sub">Demo Finans (fictional bank). Replies are approved templates; personal data is redacted; anything uncertain is handed to a human agent. The assistant speaks Turkish.</p>
+  <div class="banner" id="status">Loading status…</div>
   <div id="log"></div>
   <form id="f">
-    <input type="text" id="t" placeholder="Arayanın söylediği…" autocomplete="off" maxlength="1000" required>
-    <label><input type="checkbox" id="audio" checked> Ses üret</label>
-    <button type="submit">Gönder</button>
-    <button type="button" id="mic" title="Basılı tut değil: bir kez bas konuş, tekrar bas gönder">🎤 Konuş</button>
-    <button type="button" class="ghost" id="reset">Yeni çağrı</button>
+    <input type="text" id="t" placeholder="What the caller says (Turkish)…" autocomplete="off" maxlength="1000" required>
+    <label><input type="checkbox" id="audio" checked> Speak replies</label>
+    <button type="submit">Send</button>
+    <button type="button" id="mic" title="Click once to start talking, click again to send">🎤 Talk</button>
+    <button type="button" class="ghost" id="reset">New call</button>
   </form>
+  <div class="who" style="margin-top:12px">Try a caller phrase</div>
   <div class="chips" id="chips"></div>
   <div class="padrow">
-    <div class="pad" id="pad" aria-label="Telefon tuş takımı"></div>
-    <div><div class="who">Tuşlama</div><div id="pinbox"></div></div>
+    <div class="pad" id="pad" aria-label="Phone keypad"></div>
+    <div><div class="who">Keypad</div><div id="pinbox"></div></div>
   </div>
 </main>
 <script>
@@ -58,7 +59,7 @@ const examples = [
   "Kredi kartı limitimi artırmak istiyorum", "Bakiyemi öğrenmek istiyorum", "mavi bulut"
 ];
 let sid = null, awaiting = null, pinBuf = "";
-// Turlar sırayla gider; "Yeni çağrı"dan sonra önceki çağrının geç gelen yanıtı yok sayılır.
+// Turns are sent in order; after "New call" a late reply from the previous call is ignored.
 let callGen = 0, queue = Promise.resolve();
 const enqueue = fn => (queue = queue.then(fn, fn));
 const log = document.getElementById("log");
@@ -67,14 +68,14 @@ const t = document.getElementById("t");
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
 function addUser(text) {
-  const d = el("div", "turn"); d.append(el("div", "who", "Arayan"), el("div", null, text)); log.append(d);
+  const d = el("div", "turn"); d.append(el("div", "who", "Caller"), el("div", null, text)); log.append(d);
 }
 function addBot(j) {
   const d = el("div", "turn");
-  const who = el("div", "who", "Asistan"); who.append(el("span", "badge " + j.action, j.action));
+  const who = el("div", "who", "Assistant"); who.append(el("span", "badge " + j.action, j.action));
   const meta = el("div", "meta",
-    `niyet=${j.intent}  gerekçe=${j.reasons.join(", ")}\nmaskelenmiş girdi: ${j.transcript_redacted}` +
-    (Object.keys(j.pii_found).length ? `\nbulunan kişisel veri: ${JSON.stringify(j.pii_found)}` : ""));
+    `intent=${j.intent}  reasons=${j.reasons.join(", ")}\nredacted input: ${j.transcript_redacted}` +
+    (Object.keys(j.pii_found).length ? `\npersonal data found: ${JSON.stringify(j.pii_found)}` : ""));
   meta.style.whiteSpace = "pre-wrap";
   d.append(who, el("div", null, j.reply), meta);
   log.append(d);
@@ -87,56 +88,56 @@ function addBot(j) {
 }
 function send(text, dtmf) { const gen = callGen; return enqueue(() => gen === callGen && sendNow(text, dtmf, gen)); }
 async function sendNow(text, dtmf, gen) {
-  addUser(dtmf ? `☎ tuşladı: ${awaiting === "pin" ? "••••" : dtmf}` : text);
+  addUser(dtmf ? `☎ pressed: ${awaiting === "pin" ? "••••" : dtmf}` : text);
   const payload = { session_id: sid, with_audio: document.getElementById("audio").checked };
   if (dtmf) payload.dtmf = dtmf; else payload.text = text;
   const r = await fetch("/v1/turn", { method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify(payload) });
   if (gen !== callGen) return;
-  if (!r.ok) { log.append(el("div", "turn", `Hata ${r.status}: çağrı temsilciye yönlendirilmeli.`)); return; }
+  if (!r.ok) { log.append(el("div", "turn", `Error ${r.status}: route the call to an agent.`)); return; }
   const j = await r.json(); if (gen !== callGen) return;
   sid = j.session_id; awaiting = j.awaiting; addBot(j); pinUi();
   window.scrollTo(0, document.body.scrollHeight);
 }
-// Mikrofon: kaydı /v1/turn/audio'ya yollar (ALLOW_CLOUD_AUDIO=true gerekir; ses buluttaki STT'ye gider).
+// Microphone: posts the recording to /v1/turn/audio (needs ALLOW_CLOUD_AUDIO=true; audio goes to a cloud STT).
 const mic = document.getElementById("mic");
 let rec = null, chunks = [];
 mic.addEventListener("click", async () => {
   if (rec && rec.state === "recording") { rec.stop(); return; }
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch { log.append(el("div", "turn", "Mikrofon izni alınamadı.")); return; }
+  catch { log.append(el("div", "turn", "Microphone permission was denied.")); return; }
   chunks = [];
   rec = new MediaRecorder(stream);
   rec.ondataavailable = e => chunks.push(e.data);
   const gen = callGen;
   rec.onstop = async () => {
     stream.getTracks().forEach(t => t.stop());
-    mic.textContent = "🎤 Konuş";
+    mic.textContent = "🎤 Talk";
     const fd = new FormData();
     fd.append("file", new Blob(chunks, { type: rec.mimeType }), "kayit.webm");
     if (sid) fd.append("session_id", sid);
-    log.append(el("div", "turn who", "Arayan (ses) — yazıya çevriliyor…"));
+    log.append(el("div", "turn who", "Caller (audio) — transcribing…"));
     const t0 = performance.now();
     const r = await fetch("/v1/turn/audio", { method: "POST", body: fd });
     if (!r.ok) { log.append(el("div", "turn", `Hata ${r.status}: ${(await r.json()).detail}`)); return; }
     const j = await r.json(); if (gen !== callGen) return;
     sid = j.session_id; awaiting = j.awaiting; pinUi();
-    j.reasons.push(`süre=${((performance.now() - t0) / 1000).toFixed(1)}sn`);
+    j.reasons.push(`latency=${((performance.now() - t0) / 1000).toFixed(1)}s`);
     addBot(j);
     window.scrollTo(0, document.body.scrollHeight);
   };
   rec.start();
-  mic.textContent = "⏹ Bitir ve gönder";
+  mic.textContent = "⏹ Stop and send";
 });
 document.getElementById("f").addEventListener("submit", e => { e.preventDefault(); const v = t.value.trim(); if (v) { t.value = ""; send(v); } });
 document.getElementById("reset").addEventListener("click", () => { callGen++; sid = null; awaiting = null; pinBuf = ""; pinUi(); log.replaceChildren(); });
-// Tuş takımı: PIN beklenirken 4 hane toplanıp tek seferde gönderilir (şifre ekranda gizli); * temsilci.
+// Keypad: while a PIN is expected, 4 digits are collected and sent at once (hidden on screen); * = agent.
 const pinbox = document.getElementById("pinbox");
 function pinUi() { pinbox.textContent = awaiting === "pin" ? ("•".repeat(pinBuf.length) + "_".repeat(4 - pinBuf.length)) : ""; }
 for (const k of ["1","2","3","4","5","6","7","8","9","*","0","#"]) {
   const b = el("button", null, k); b.type = "button";
-  // Karar sıra gelince verilir: önceki yanıt "PIN bekleniyor" dediyse bu tuş şifre hanesidir.
+  // Decided when the turn runs: if the previous reply asked for a PIN, this key is a PIN digit.
   b.onclick = () => { const gen = callGen; enqueue(async () => {
     if (gen !== callGen) return;
     if (awaiting === "pin") {
@@ -152,8 +153,8 @@ const chips = document.getElementById("chips");
 for (const x of examples) { const b = el("button", null, x); b.type = "button"; b.onclick = () => send(x); chips.append(b); }
 fetch("/health").then(r => r.json()).then(h => {
   document.getElementById("status").textContent =
-    `Sağlayıcı: ${h.provider}. Bulut ses ucu: ${h.cloud_audio ? "AÇIK" : "kapalı (ALLOW_CLOUD_AUDIO=false)"}. ` +
-    (h.mock_banking ? "Demo bankacılık AÇIK (demo PIN: 1234, bakiyeler uydurmadır)." : "Demo bankacılık kapalı: bakiye talebi temsilciye gider.");
+    `Provider: ${h.provider}. Cloud audio: ${h.cloud_audio ? "ON" : "off (ALLOW_CLOUD_AUDIO=false)"}. ` +
+    (h.mock_banking ? "Demo banking ON (demo PIN: 1234, balances are made up)." : "Demo banking off: balance requests go to an agent.");
 });
 </script>
 </body>

@@ -10,15 +10,15 @@ dm = DialogueManager()
 
 def test_in_scope_answer():
     r = dm.handle(Session(), "Şubeniz saat kaçta açılıyor?")
-    assert r.action == "answer" and r.intent == "sube_saatleri"
-    assert any(r.reply.startswith(v) for v in FAQ["sube_saatleri"])
+    assert r.action == "answer" and r.intent == "branch_hours"
+    assert any(r.reply.startswith(v) for v in FAQ["branch_hours"])
 
 
 def test_sensitive_data_triggers_handoff_and_is_masked():
     s = Session()
     r = dm.handle(s, f"Kimlik numaram {TCKN} bakiyemi öğrenmek istiyorum")
     assert r.action == "handoff" and "sensitive_data_shared" in r.reasons
-    assert TCKN not in r.redacted_input and "[TCKN]" in r.redacted_input
+    assert TCKN not in r.redacted_input and "[NATIONAL_ID]" in r.redacted_input
     assert s.handed_off
 
 
@@ -48,7 +48,7 @@ def test_once_handed_off_stays_handed_off():
 
 
 def test_replies_never_contain_pii():
-    # TTS'e giden metin yalnızca şablondur; kullanıcı girdisini yansıtmaz.
+    # Text sent to TTS is only a template; it never echoes caller input.
     r = dm.handle(Session(), f"TC {TCKN} telefon 05321234567 şube saatleri")
     _, found = redact(r.reply)
     assert not found
@@ -56,42 +56,42 @@ def test_replies_never_contain_pii():
 
 def test_negated_security_intent_is_not_handed_off_but_is_logged():
     r = dm.handle(Session(), "Kartımı kaybetmedim")
-    assert r.action == "clarify" and "negated:kart_kayip" in r.reasons
+    assert r.action == "clarify" and "negated:card_security" in r.reasons
 
 
 def test_out_of_scope_banking_request_hands_off_without_clarify_loop():
     r = dm.handle(Session(), "Kredi kartı limitimi artırmak istiyorum")
-    assert r.action == "handoff" and "policy_handoff:kapsam_disi" in r.reasons
+    assert r.action == "handoff" and "policy_handoff:out_of_scope" in r.reasons
 
 
 def test_name_is_masked_and_intent_still_found():
     r = dm.handle(Session(), "Adım Ahmet Yılmaz, kartımı kaybettim")
-    assert r.intent == "kart_kayip" and r.action == "handoff"
-    assert "Ahmet" not in r.redacted_input and r.pii_found == {"ad_soyad": 1}
+    assert r.intent == "card_security" and r.action == "handoff"
+    assert "Ahmet" not in r.redacted_input and r.pii_found == {"full_name": 1}
 
 
 def test_replies_vary_but_stay_within_templates():
     d = DialogueManager(rng=random.Random(1))
     seen = {d.handle(Session(), "Şubeniz kaçta açılıyor").reply for _ in range(30)}
     assert len(seen) > 1
-    assert all(any(x.startswith(v) for v in FAQ["sube_saatleri"]) for x in seen)
+    assert all(any(x.startswith(v) for v in FAQ["branch_hours"]) for x in seen)
 
 
 def test_greeting_offers_dtmf_menu_and_keys_work():
     s = Session()
     r = dm.handle(s, "Merhaba")
     assert "1'i" in r.reply and r.awaiting == "menu"
-    assert dm.handle_dtmf(s, "1").intent == "sube_saatleri"
-    assert dm.handle_dtmf(s, "1").intent == "menu"  # sonrası menüsünde 1 = ana menü
-    assert dm.handle_dtmf(s, "2").intent == "kredi_bilgi"
-    assert dm.handle_dtmf(s, "9").intent == "tesekkur_kapanis"
+    assert dm.handle_dtmf(s, "1").intent == "branch_hours"
+    assert dm.handle_dtmf(s, "1").intent == "menu"  # in the post-answer menu, 1 = main menu
+    assert dm.handle_dtmf(s, "2").intent == "loan_info"
+    assert dm.handle_dtmf(s, "9").intent == "goodbye"
 
 
 def test_dtmf_zero_hands_off_and_invalid_counts_as_fallback():
     s = Session()
     assert dm.handle_dtmf(s, "7").action == "clarify"
     assert dm.handle_dtmf(s, "8").action == "handoff"
-    assert dm.handle_dtmf(Session(), "0").intent == "temsilci_talebi"
+    assert dm.handle_dtmf(Session(), "0").intent == "agent_request"
 
 
 def test_balance_without_mock_banking_hands_off():
@@ -123,18 +123,18 @@ def test_spoken_pin_is_refused_and_not_logged():
     s = Session()
     bank.handle(s, "Bakiye")
     r = bank.handle(s, "bir iki üç dört")
-    assert r.action == "collect" and r.redacted_input == "[PIN_BEKLENIRKEN_SOZLU_GIRDI]"
+    assert r.action == "collect" and r.redacted_input == "[SPOKEN_INPUT_DURING_PIN]"
     assert "dört" not in r.redacted_input
 
 
 def test_star_during_pin_reaches_agent():
     s = Session()
     bank.handle(s, "Bakiye")
-    assert bank.handle_dtmf(s, "*").intent == "temsilci_talebi"
+    assert bank.handle_dtmf(s, "*").intent == "agent_request"
 
 
 def test_pin_may_start_with_zero():
-    # Chrome testinde bulundu: 0 eskiden PIN ekranından çıkıştı, 0'la başlayan PIN girilemiyordu.
+    # Found in an end-to-end Chrome test: 0 used to exit PIN entry, so PINs starting with 0 could not be entered.
     s = Session()
     bank.handle(s, "Bakiye")
     r = bank.handle_dtmf(s, "0123")

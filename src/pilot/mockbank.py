@@ -1,14 +1,14 @@
-"""Sahte çekirdek bankacılık servisi (yalnızca demo).
+"""Mock core-banking service (demo only).
 
-Gerçek entegrasyonda bu modülün yerini müşterinin hesap API'si alır; arayüz
-(verify_pin, balance) aynı kalır. Buradaki bakiyeler UYDURMADIR ve gerçek bir
-hesaba ait değildir.
+In a real deployment the customer's account API replaces this module; the interface
+(verify_pin, balance) stays the same. The balances here are MADE UP and belong to no
+real account.
 """
 from __future__ import annotations
 
 import hashlib
 
-DEMO_PIN = "1234"  # Demo telefon bankacılığı şifresi; gerçek şifre değildir.
+DEMO_PIN = "1234"  # Demo phone-banking PIN; not a real credential.
 
 
 def verify_pin(pin: str) -> bool:
@@ -16,10 +16,11 @@ def verify_pin(pin: str) -> bool:
 
 
 def balance(session_id: str) -> tuple[int, int]:
-    """Oturuma göre sabit ama rastgele görünen demo bakiye: (lira, kuruş)."""
+    """Demo balance that looks random but is stable per session: (lira, kuruş)."""
     h = int(hashlib.sha256(session_id.encode()).hexdigest(), 16)
     return 500 + h % 49_500, (h // 49_500) % 100
 
 
 def format_tl(lira: int, kurus: int) -> str:
+    # Spoken Turkish format, e.g. "12.480 lira 35 kuruş".
     return f"{lira:,}".replace(",", ".") + f" lira {kurus} kuruş"

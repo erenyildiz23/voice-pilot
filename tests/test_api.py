@@ -37,7 +37,7 @@ def test_audit_log_has_no_raw_pii(tmp_path):
     raw = path.read_text(encoding="utf-8")
     assert TCKN not in raw
     entry = json.loads(raw.splitlines()[0])
-    assert entry["pii_counts"] == {"tckn": 1} and "[TCKN]" in entry["redacted_input"]
+    assert entry["pii_counts"] == {"national_id": 1} and "[NATIONAL_ID]" in entry["redacted_input"]
 
 
 def test_audio_blocked_by_default(tmp_path):
@@ -83,12 +83,12 @@ def test_elevenlabs_error_does_not_leak_body():
     except ProviderError as e:
         assert "401" in str(e) and "secret-ish" not in str(e)
     else:
-        raise AssertionError("ProviderError bekleniyordu")
+        raise AssertionError("expected ProviderError")
 
 
 def test_demo_page_and_health(tmp_path):
     c, _ = client(tmp_path)
-    assert "Sesli asistan" in c.get("/").text or "sesli asistan" in c.get("/").text
+    assert "Turkish voice assistant pilot" in c.get("/").text
     assert c.get("/health").json() == {"status": "ok", "cloud_audio": False, "provider": "MockProvider", "mock_banking": False}
 
 
