@@ -4,9 +4,9 @@ Case study 1'in çalışan prototipi: çağrı merkezi için Türkçe sesli asis
 
 ## Demo (2 dk, sesli)
 
-[![Demo videosu: PIN doğrulama sonrası demo bakiye](docs/media/demo-poster.png)](docs/media/demo.mp4)
+https://github.com/user-attachments/assets/009fa9fe-3615-4e3b-94eb-0a9757c96d51
 
-▶ [Videoyu izle (MP4, 2,5 MB)](docs/media/demo.mp4)
+Oynatıcı açılmazsa: [MP4 dosyası (2,5 MB)](docs/media/demo.mp4)
 
 | Zaman | Ne oluyor | Gösterdiği |
 | --- | --- | --- |
